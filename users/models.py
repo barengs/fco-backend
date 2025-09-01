@@ -1,7 +1,16 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.contrib.auth.models import Group
+from django.core.exceptions import ObjectDoesNotExist
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from django.db.models import QuerySet, Manager
 
 class User(AbstractUser):
+    if TYPE_CHECKING:
+        groups: Manager
+        
     USER_TYPE_CHOICES = (
         ('ship_owner', 'Ship Owner'),
         ('captain', 'Captain'),
@@ -34,3 +43,44 @@ class User(AbstractUser):
         
     def is_admin(self):
         return self.user_type == 'admin'
+    
+    def get_roles(self) -> 'QuerySet[Group]':
+        """
+        Get all roles assigned to this user
+        """
+        return self.groups.all()
+    
+    def has_role(self, role_name):
+        """
+        Check if user has a specific role
+        """
+        return self.groups.filter(name=role_name).exists()
+    
+    def assign_role(self, role_name):
+        """
+        Assign a role to this user
+        """
+        try:
+            group = Group.objects.get(name=role_name)
+            self.groups.add(group)
+            return True
+        except ObjectDoesNotExist:
+            return False
+    
+    def remove_role(self, role_name):
+        """
+        Remove a role from this user
+        """
+        try:
+            group = Group.objects.get(name=role_name)
+            self.groups.remove(group)
+            return True
+        except ObjectDoesNotExist:
+            return False
+    
+    @property
+    def role_names(self):
+        """
+        Get a list of role names assigned to this user
+        """
+        return list(self.groups.values_list('name', flat=True))

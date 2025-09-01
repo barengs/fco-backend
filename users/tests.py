@@ -1,7 +1,9 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group, Permission
 from rest_framework.test import APIClient
 from rest_framework import status
+from .services import RoleManagementService
 
 User = get_user_model()
 
@@ -45,3 +47,58 @@ class UserAPITestCase(TestCase):
         response = self.client.post('/api/users/register/', data, format='json')
         # Type ignore to fix basedpyright error
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)  # type: ignore
+
+
+class RoleManagementTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123',
+            user_type='ship_owner'
+        )
+        
+    def test_create_role(self):
+        """Test creating a new role"""
+        role, created = RoleManagementService.create_role('test_role')
+        self.assertTrue(created)
+        self.assertIsInstance(role, Group)
+        self.assertEqual(role.name, 'test_role')
+        
+    def test_assign_user_to_role(self):
+        """Test assigning a user to a role"""
+        # Create a role first
+        RoleManagementService.create_role('test_role')
+        
+        # Assign user to role
+        result = RoleManagementService.assign_user_to_role(self.user, 'test_role')
+        self.assertTrue(result)
+        
+        # Check if user has the role
+        self.assertTrue(self.user.has_role('test_role'))
+        
+    def test_user_role_property(self):
+        """Test user role properties"""
+        # Create and assign roles
+        RoleManagementService.create_role('role1')
+        RoleManagementService.create_role('role2')
+        RoleManagementService.assign_user_to_role(self.user, 'role1')
+        RoleManagementService.assign_user_to_role(self.user, 'role2')
+        
+        # Check role names property
+        role_names = self.user.role_names
+        self.assertIn('role1', role_names)
+        self.assertIn('role2', role_names)
+        
+    def test_remove_user_from_role(self):
+        """Test removing a user from a role"""
+        # Create and assign role
+        RoleManagementService.create_role('test_role')
+        RoleManagementService.assign_user_to_role(self.user, 'test_role')
+        
+        # Remove user from role
+        result = RoleManagementService.remove_user_from_role(self.user, 'test_role')
+        self.assertTrue(result)
+        
+        # Check if user no longer has the role
+        self.assertFalse(self.user.has_role('test_role'))
