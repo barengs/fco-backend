@@ -21,9 +21,10 @@ class UserAPITestCase(TestCase):
     def test_register_user_success(self):
         """Test successful user registration"""
         response = self.client.post('/api/users/register/', self.user_data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIn('user', response.data)
-        self.assertIn('token', response.data)
+        # Type ignore to fix basedpyright error
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)  # type: ignore
+        self.assertIn('user', response.data)  # type: ignore
+        self.assertIn('token', response.data)  # type: ignore
         
         # Check if user was created in database
         self.assertTrue(User.objects.filter(username='testuser').exists())
@@ -33,12 +34,14 @@ class UserAPITestCase(TestCase):
         data = self.user_data.copy()
         data['password_confirm'] = 'differentpassword'
         response = self.client.post('/api/users/register/', data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('non_field_errors', response.data)
+        # Type ignore to fix basedpyright error
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)  # type: ignore
+        self.assertIn('non_field_errors', response.data)  # type: ignore
 
     def test_register_user_missing_ship_registration(self):
         """Test user registration for ship owner without ship registration number"""
         data = self.user_data.copy()
         data['ship_registration_number'] = ''
         response = self.client.post('/api/users/register/', data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        # Type ignore to fix basedpyright error
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)  # type: ignore
