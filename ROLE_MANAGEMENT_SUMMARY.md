@@ -2,7 +2,7 @@
 
 ## Overview
 
-We have successfully implemented a comprehensive role management system that integrates with Django's built-in authentication and authorization system. This system provides fine-grained access control for the Fish Capture Optimization application.
+We have successfully implemented a comprehensive role management system that integrates with Django's built-in authentication and authorization system. This system provides fine-grained access control for the Fish Chain Optimization application.
 
 ## Files Created
 

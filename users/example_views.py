@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from .decorators import role_required, permission_required, role_or_permission_required
-from .services import RoleManagementService
+from role_permission.services import RoleManagementService
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

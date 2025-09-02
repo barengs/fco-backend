@@ -1,86 +1,89 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.contrib.auth.models import Group
-from django.core.exceptions import ObjectDoesNotExist
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from django.db.models import QuerySet, Manager
 
 class User(AbstractUser):
-    if TYPE_CHECKING:
-        groups: Manager
-        
-    USER_TYPE_CHOICES = (
-        ('ship_owner', 'Ship Owner'),
-        ('captain', 'Captain'),
-        ('admin', 'Admin'),
-    )
-    
-    user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES)
-    ship_registration_number = models.CharField(max_length=50, blank=True, null=True, unique=True)
+    """
+    Custom User model with role-based approach
+    Roles are managed through Django Groups
+    """
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     
-    # For ship owners and captains, we'll use either username or ship registration number for login
-    USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = ['user_type', 'email']
-    
     def __str__(self):
-        # Using getattr to avoid type checking issues
-        display_method = getattr(self, 'get_user_type_display', None)
-        if display_method:
-            user_type_display = display_method()
-        else:
-            # Fallback to showing the raw value
-            user_type_display = self.user_type
-        return f"{self.username} ({user_type_display})"
-    
-    def is_ship_owner(self):
-        return self.user_type == 'ship_owner'
-        
-    def is_captain(self):
-        return self.user_type == 'captain'
-        
-    def is_admin(self):
-        return self.user_type == 'admin'
-    
-    def get_roles(self) -> 'QuerySet[Group]':
-        """
-        Get all roles assigned to this user
-        """
-        return self.groups.all()
-    
-    def has_role(self, role_name):
-        """
-        Check if user has a specific role
-        """
-        return self.groups.filter(name=role_name).exists()
-    
-    def assign_role(self, role_name):
-        """
-        Assign a role to this user
-        """
-        try:
-            group = Group.objects.get(name=role_name)
-            self.groups.add(group)
-            return True
-        except ObjectDoesNotExist:
-            return False
-    
-    def remove_role(self, role_name):
-        """
-        Remove a role from this user
-        """
-        try:
-            group = Group.objects.get(name=role_name)
-            self.groups.remove(group)
-            return True
-        except ObjectDoesNotExist:
-            return False
+        return self.username
     
     @property
     def role_names(self):
-        """
-        Get a list of role names assigned to this user
-        """
-        return list(self.groups.values_list('name', flat=True))
+        """Get all role names assigned to this user"""
+        return list(self.groups.values_list('name', flat=True))  # type: ignore
+    
+    def has_role(self, role_name):
+        """Check if user has a specific role"""
+        return self.groups.filter(name=role_name).exists()  # type: ignore
+
+class ShipOwnerProfile(models.Model):
+    """
+    Profile for ship owners (individual or company)
+    """
+    OWNER_TYPE_CHOICES = (
+        ('individual', 'Individual'),
+        ('company', 'Company'),
+    )
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='ship_owner_profile')
+    owner_type = models.CharField(max_length=20, choices=OWNER_TYPE_CHOICES, default='individual')
+    company_name = models.CharField(max_length=200, blank=True, null=True, verbose_name="Nama Perusahaan")
+    tax_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="NPWP")
+    address = models.TextField(blank=True, null=True, verbose_name="Alamat")
+    contact_person = models.CharField(max_length=100, blank=True, null=True, verbose_name="Kontak Person")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        if self.owner_type == 'company' and self.company_name:
+            return f"{self.company_name} (Company)"
+        return f"{self.user.username} (Individual)"  # type: ignore
+    
+    class Meta:
+        verbose_name = "Profil Pemilik Kapal"
+        verbose_name_plural = "Profil Pemilik Kapal"
+
+class CaptainProfile(models.Model):
+    """
+    Profile for captains
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='captain_profile')
+    license_number = models.CharField(max_length=50, unique=True, verbose_name="Nomor Lisensi")
+    years_of_experience = models.IntegerField(blank=True, null=True, verbose_name="Tahun Pengalaman")
+    vessel_type_experience = models.TextField(blank=True, null=True, verbose_name="Pengalaman Jenis Kapal")
+    certification = models.TextField(blank=True, null=True, verbose_name="Sertifikasi")
+    address = models.TextField(blank=True, null=True, verbose_name="Alamat")
+    emergency_contact = models.CharField(max_length=15, blank=True, null=True, verbose_name="Kontak Darurat")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.license_number}"  # type: ignore
+    
+    class Meta:
+        verbose_name = "Profil Nahkoda"
+        verbose_name_plural = "Profil Nahkoda"
+
+class AdminProfile(models.Model):
+    """
+    Profile for administrative staff
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='admin_profile')
+    employee_id = models.CharField(max_length=50, unique=True, verbose_name="ID Pegawai")
+    department = models.CharField(max_length=100, blank=True, null=True, verbose_name="Departemen")
+    position = models.CharField(max_length=100, blank=True, null=True, verbose_name="Jabatan")
+    institution = models.CharField(max_length=200, blank=True, null=True, verbose_name="Institusi")
+    address = models.TextField(blank=True, null=True, verbose_name="Alamat")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.employee_id}"  # type: ignore
+    
+    class Meta:
+        verbose_name = "Profil Admin"
+        verbose_name_plural = "Profil Admin"

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This role management system provides a comprehensive solution for managing user roles and permissions in the Fish Capture Optimization application. It combines Django's built-in authentication and authorization system with custom role management features.
+This role management system provides a comprehensive solution for managing user roles and permissions in the Fish Chain Optimization application. It combines Django's built-in authentication and authorization system with custom role management features.
 
 ## Components
 

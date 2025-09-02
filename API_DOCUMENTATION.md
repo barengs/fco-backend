@@ -1,4 +1,4 @@
-# Fish Capture Optimization API Documentation
+# Fish Chain Optimization API Documentation
 
 ## User Management
 
@@ -6,7 +6,7 @@
 
 **Endpoint:** `POST /api/users/register/`
 
-Register a new user (ship owner, captain, or admin).
+Register a new user with a specific role (ship owner, captain, or admin).
 
 #### Request Body
 
@@ -14,11 +14,22 @@ Register a new user (ship owner, captain, or admin).
 {
   "username": "string",
   "email": "string",
-  "user_type": "ship_owner|captain|admin",
-  "ship_registration_number": "string (required for ship_owner and captain)",
+  "role": "ship_owner|captain|admin",
   "phone_number": "string (optional)",
   "password": "string",
-  "password_confirm": "string"
+  "password_confirm": "string",
+  // Role-specific fields
+  // For ship_owner:
+  "owner_type": "individual|company (optional, default: individual)",
+  "company_name": "string (required for company owners)",
+  "tax_id": "string (optional)",
+  // For captain:
+  "license_number": "string (required for captains)",
+  "years_of_experience": "integer (optional)",
+  // For admin:
+  "employee_id": "string (required for admins)",
+  "department": "string (optional)",
+  "position": "string (optional)"
 }
 ```
 
@@ -30,12 +41,24 @@ Register a new user (ship owner, captain, or admin).
     "id": "integer",
     "username": "string",
     "email": "string",
-    "user_type": "string",
-    "ship_registration_number": "string",
     "phone_number": "string",
-    "date_joined": "datetime"
+    "date_joined": "datetime",
+    "role_names": ["string"],
+    "ship_owner_profile": {
+      "id": "integer",
+      "owner_type": "individual|company",
+      "company_name": "string|null",
+      "tax_id": "string|null",
+      "address": "string|null",
+      "contact_person": "string|null",
+      "created_at": "datetime",
+      "updated_at": "datetime"
+    }
   },
-  "token": "string",
+  "tokens": {
+    "refresh": "string",
+    "access": "string"
+  },
   "message": "User registered successfully"
 }
 ```
@@ -44,13 +67,13 @@ Register a new user (ship owner, captain, or admin).
 
 **Endpoint:** `POST /api/users/login/`
 
-Login with username or ship registration number.
+Login with username and password.
 
 #### Request Body
 
 ```json
 {
-  "username": "string (can be username or ship_registration_number)",
+  "username": "string",
   "password": "string"
 }
 ```
@@ -63,12 +86,24 @@ Login with username or ship registration number.
     "id": "integer",
     "username": "string",
     "email": "string",
-    "user_type": "string",
-    "ship_registration_number": "string",
     "phone_number": "string",
-    "date_joined": "datetime"
+    "date_joined": "datetime",
+    "role_names": ["string"],
+    "ship_owner_profile": {
+      "id": "integer",
+      "owner_type": "individual|company",
+      "company_name": "string|null",
+      "tax_id": "string|null",
+      "address": "string|null",
+      "contact_person": "string|null",
+      "created_at": "datetime",
+      "updated_at": "datetime"
+    }
   },
-  "token": "string",
+  "tokens": {
+    "refresh": "string",
+    "access": "string"
+  },
   "message": "Login successful"
 }
 ```
@@ -78,6 +113,14 @@ Login with username or ship registration number.
 **Endpoint:** `POST /api/users/logout/`
 
 Logout the current user (requires authentication).
+
+#### Request Body
+
+```json
+{
+  "refresh": "string"
+}
+```
 
 #### Response
 
@@ -100,10 +143,19 @@ Get the current user's profile (requires authentication).
   "id": "integer",
   "username": "string",
   "email": "string",
-  "user_type": "string",
-  "ship_registration_number": "string",
   "phone_number": "string",
-  "date_joined": "datetime"
+  "date_joined": "datetime",
+  "role_names": ["string"],
+  "ship_owner_profile": {
+    "id": "integer",
+    "owner_type": "individual|company",
+    "company_name": "string|null",
+    "tax_id": "string|null",
+    "address": "string|null",
+    "contact_person": "string|null",
+    "created_at": "datetime",
+    "updated_at": "datetime"
+  }
 }
 ```
 
@@ -111,7 +163,7 @@ Get the current user's profile (requires authentication).
 
 **Endpoint:** `PUT /api/users/profile/update/`
 
-Update the current user's profile (requires authentication).
+Update the current user's basic profile (requires authentication).
 
 #### Request Body
 
@@ -131,17 +183,59 @@ Update the current user's profile (requires authentication).
   "id": "integer",
   "username": "string",
   "email": "string",
-  "user_type": "string",
-  "ship_registration_number": "string",
   "phone_number": "string",
-  "date_joined": "datetime"
+  "date_joined": "datetime",
+  "role_names": ["string"],
+  "ship_owner_profile": {
+    "id": "integer",
+    "owner_type": "individual|company",
+    "company_name": "string|null",
+    "tax_id": "string|null",
+    "address": "string|null",
+    "contact_person": "string|null",
+    "created_at": "datetime",
+    "updated_at": "datetime"
+  }
+}
+```
+
+### 6. Update Role-Specific Profile
+
+**Endpoint:** `PUT /api/users/profile/ship-owner/update/`
+
+Update the current user's ship owner profile (requires authentication and ship_owner role).
+
+#### Request Body
+
+```json
+{
+  "owner_type": "individual|company",
+  "company_name": "string",
+  "tax_id": "string",
+  "address": "string",
+  "contact_person": "string"
+}
+```
+
+#### Response
+
+```json
+{
+  "id": "integer",
+  "owner_type": "individual|company",
+  "company_name": "string|null",
+  "tax_id": "string|null",
+  "address": "string|null",
+  "contact_person": "string|null",
+  "created_at": "datetime",
+  "updated_at": "datetime"
 }
 ```
 
 ## Authentication
 
-All endpoints except registration and login require token authentication. Include the Authorization header in your requests:
+All endpoints except registration and login require JWT token authentication. Include the Authorization header in your requests:
 
 ```
-Authorization: Token <your_token_here>
+Authorization: Bearer <your_access_token_here>
 ```

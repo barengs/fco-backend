@@ -17,7 +17,7 @@ class ShipUserBackend(ModelBackend):
         try:
             # Try to find user by username or ship registration number
             user = User.objects.get(
-                Q(username=username) | Q(ship_registration_number=username)
+                Q(username=username) | Q(ship_number=username)
             )
         except User.DoesNotExist:
             # Run the default password hasher once to reduce the timing
